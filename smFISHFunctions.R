@@ -52,19 +52,19 @@ previewfiltFISH <- function(smFISH, intensity=0, score=0, background=Inf, residu
 
 getSpotsXYZ <- function(ch01, ch02, ch03, distDim) {  ####Simplify the data so its just a list of X,Y,Z co-ordinates for the distance calculation - distDim can be 2 or 3 so
   if(distDim == 3) {
-    if(!is.null(ch01)){
+    if(!is.null(ch01) && length(ch01[,1])>0){
       ch01Pos = data.frame(X = ch01$Pos_X, Y = ch01$Pos_Y, Z = ch01$Pos_Z)
     }
     else{
       ch01Pos = data.frame(X=NA, Y=NA, Z=NA)
     }
-    if(!is.null(ch02)){
+    if(!is.null(ch02) && length(ch02[,1])>0){
       ch02Pos = data.frame(X = ch02$Pos_X, Y = ch02$Pos_Y, Z = ch02$Pos_Z)
     }
     else{
       ch02Pos = data.frame(X=NA, Y=NA, Z=NA)
     }
-    if(!is.null(ch03)){
+    if(!is.null(ch03) && length(ch01[,1])>0){
       ch03Pos = data.frame(X = ch03$Pos_X, Y = ch03$Pos_Y, Z = ch03$Pos_Z)
     }
     else{
@@ -72,28 +72,28 @@ getSpotsXYZ <- function(ch01, ch02, ch03, distDim) {  ####Simplify the data so i
     }
   }
   if(distDim == 2) {
-    if(!is.null(ch01)){
-      ch01Pos = data.frame(X = ch01$Pos_X, Y = ch01$Pos_Y)
+    if(!is.null(ch01) && length(ch01[,1])>0){
+        ch01Pos = data.frame(X = ch01$Pos_X, Y = ch01$Pos_Y)
     }
     else{
       ch01Pos = data.frame(X=NA, Y=NA)
     }
-    if(!is.null(ch02)){
+    if(!is.null(ch02) && length(ch02[,1])>0){
       ch02Pos = data.frame(X = ch02$Pos_X, Y = ch02$Pos_Y)
     }
     else{
       ch02Pos = data.frame(X=NA, Y=NA)
     }
-    if(!is.null(ch03)){
+    if(!is.null(ch03) && length(ch03[,1])>0){
       ch03Pos = data.frame(X = ch03$Pos_X, Y = ch03$Pos_Y)
     }
     else{
       ch03Pos = data.frame(X=NA, Y=NA)
     }
   }
-  rownames(ch02Pos) = paste(rownames(ch02Pos),"ch02",sep = "")
-  rownames(ch03Pos) = paste(rownames(ch03Pos),"ch03",sep = "")
-  rownames(ch01Pos) = paste(rownames(ch01Pos),"ch01",sep = "")
+  rownames(ch02Pos) = paste(rownames(ch02),"ch02",sep = "")
+  rownames(ch03Pos) = paste(rownames(ch03),"ch03",sep = "")
+  rownames(ch01Pos) = paste(rownames(ch01),"ch01",sep = "")
   spotPosAll = rbind(ch01Pos, ch02Pos, ch03Pos)
   return(spotPosAll)
 }
@@ -115,9 +115,18 @@ closestSpotGrabber <- function(dm = dm, i, numAgainst = numAgainst, numAll = num
   #spotPosAgainst is the dataframe with the X,Y,Z pos of only the set of spots that act as the reference e.g if doing 1v2, this will be spotPosCh01 we will get this in the function
   #comp will be the comparison e.g. "1v2" or "2v3"
   closestSpotsDF = data.frame()
+  if(length(dm[(numAgainst+1):numAll, i])>1){
   closestSpot = dm[(numAgainst+1):numAll, i][which(dm[(numAgainst+1):numAll, i]==min(dm[(numAgainst+1):numAll, i]))]
+  }
+  if(length(dm[(numAgainst+1):numAll, i])==1){
+    closestSpot = as.data.frame(dm[(numAgainst+1):numAll, i][which(dm[(numAgainst+1):numAll, i]==min(dm[(numAgainst+1):numAll, i]))])
+    colnames(closestSpot) = colnames(dm)[length(colnames(dm))]
+  }
+  print(closestSpot)
   spotNumber = as.numeric(substr(names(closestSpot),-4,nchar(names(closestSpot))-4))
-  df = data.frame(spotsCompAgainst=i, spotsComp=spotNumber, Distance = closestSpot[[1]])
+  print(spotNumber)
+  df = data.frame(spotsCompAgainst=str_remove(rownames(dm), "ch0[1-3]")[1], spotsComp=spotNumber, Distance = closestSpot[[1]])
+  print(df)
   #Change the column names of the df to the variable e.g. before the df would have a column called spotsComp, but what
   #we actually want is the column name to be the string stored in the variable spotsComp (e.g. Ch02)
   names(df)[names(df)=="spotsCompAgainst"]  <- spotsCompAgainst
@@ -130,9 +139,9 @@ closestSpotGrabber <- function(dm = dm, i, numAgainst = numAgainst, numAll = num
 
 getClosestSpots <- function(dm, comp){       ############Returns a df containing each spot paired with its closest spot in the opposite channel - crude output e.g. ch01 spot1, closest spot in ch02 spot45. Use getDetails to get detailed spot info for paired spots
   spotsCompAgainst = paste("ch0", substr(comp, 1, 1), sep = "")
-  spotsComp = paste("ch0", substr(comp, 3, 3), sep = "")
-  numAgainst = length(subset(dm, subset = str_sub(rownames(dm), -4) %in% spotsCompAgainst)[,1])
-  numAll = length(dm[,1])
+  spotsComp=paste("ch0", substr(comp, 3, 3), sep = "")
+  numAgainst=length(subset(dm, subset = str_sub(rownames(dm), -4) %in% spotsCompAgainst)[,1])
+  numAll=length(dm[,1])
   return(do.call(rbind.data.frame,lapply(1:numAgainst,closestSpotGrabber, dm =dm, numAgainst = numAgainst, numAll = numAll, spotsCompAgainst = spotsCompAgainst, spotsComp=spotsComp)))
 }
 
@@ -275,6 +284,137 @@ compSpots <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, distDim 
   #Get the closest spot in the opposing channel - these spots are then 'paired' #Need if statements so if ch03 doesn't exist, it doesnt try and do it
 } #Compare spots in up to 3 channels for co-localization
 
+
+compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, distDim = 2, step=5){ ######Compares spots from channels in pairwise comparisons e.g. 1v2, 1v3, 2v3 etc. V slow unless data has been filtered to remove 'low quality' spots.
+  #ch01 etc is the output from FISHQuant that has been scraped ending in scraped detailed - it can be filtered beforehand using the filtFISH functions
+  #pixelsize is only used if the correct pixelsize was not set in matlab
+  #distDim is the number of dimensions used to calculate distance, 2 = xy, 3 =xyz
+  #step is the size of the step between distances used to calculate colocalisation, default = 5, may be more appropriate to use "max/100".
+  ch01<<-ch01
+  ch02<<-ch02
+  ch03<<-ch03
+  if(!is.null(ch01)){
+    ch01$Pos_X = ch01$Pos_X/(160/pixelsize)
+    ch01$Pos_Y = ch01$Pos_Y/(160/pixelsize)
+    ch01$Pos_Z = ch01$Pos_Z/(160/pixelsize)
+  }
+  if(!is.null(ch02)){
+    ch02$Pos_X = ch02$Pos_X/(160/pixelsize)
+    ch02$Pos_Y = ch02$Pos_Y/(160/pixelsize)
+    ch02$Pos_Z = ch02$Pos_Z/(160/pixelsize)
+  }
+  if(!is.null(ch03)){
+    ch03$Pos_X = ch03$Pos_X/(160/pixelsize)
+    ch03$Pos_Y = ch03$Pos_Y/(160/pixelsize)
+    ch03$Pos_Z = ch03$Pos_Z/(160/pixelsize)
+  }
+  if(is.null(ch01)){
+    pairedDetailed2v3 = data.frame()
+    for(i in 1:max(ch02$Cell)){
+      print(paste("Cell",i,sep=" "))
+      spotPosAll = getSpotsXYZ(ch01=NULL, ch02[ch02$Cell ==i,], ch03[ch02$Cell==i,], distDim)
+      spotPosAll = na.omit(spotPosAll)
+      dist2v3 = as.matrix(dist(spotPosAll))
+      paired2v3 = getClosestSpots(dm = dist2v3, comp = "2v3")
+      pairedDetailedCell2v3 = getDetails(pairedSpots = paired2v3, comp = "2v3",distDim=distDim)
+      rbind(pairedDetailed2v3, pairedDetailedCell2v3)
+    }
+    coloc2v3 = colocCalcStep(pairedDetailed = pairedDetailed2v3, step=step)
+    combColocStep = coloc2v3
+    #coloc2v3 = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2))), comp="2v3")
+    coloc2v3spot = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2)))/length(pairedDetailed2v3[,1]), comp="2v3")
+    combColoc = coloc2v3spot
+    return(list(combColoc, combColocStep,pairedDetailed2v3))
+  }
+  if(is.null(ch02)){
+    pairedDetailed1v3 = data.frame()
+    for(i in 1:max(ch03$Cell)){
+      print(paste("Cell",i,sep=" "))
+      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], NULL, ch03[ch02$Cell==i,], distDim)
+      spotPosAll = na.omit(spotPosAll)
+      dist1v3 = as.matrix(dist(spotPosAll))
+      paired1v3 = getClosestSpots(dm = dist1v3, comp = "1v3")
+      pairedDetailedCell1v3 = getDetails(pairedSpots = paired1v3, comp = "1v3",distDim=distDim)
+      rbind(pairedDetailed1v3, pairedDetailedCell1v3)
+    }
+    coloc1v3 = colocCalcStep(pairedDetailed = pairedDetailed1v3, step=step)
+    combColocStep = coloc1v3
+    #coloc1v3 = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2))), comp="1v3")
+    coloc1v3spot = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2)))/length(pairedDetailed1v3[,1]), comp="1v3")
+    combColoc = coloc1v3spot
+    return(list(combColoc, combColocStep,pairedDetailed1v3))
+  }
+  if(is.null(ch03)){
+    pairedDetailed1v2 = data.frame()
+    for(i in 1:max(ch01$Cell)){
+      print(paste("Cell",i,sep=" "))
+      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], ch02[ch02$Cell ==i,], NULL, distDim)
+      spotPosAll = na.omit(spotPosAll)
+      dist1v2 = as.matrix(dist(spotPosAll))
+      paired1v2 = getClosestSpots(dm = dist1v2, comp = "1v2")
+      pairedDetailedCell1v2 = getDetails(pairedSpots = paired1v2, comp = "1v2",distDim=distDim)
+      rbind(pairedDetailed1v2, pairedDetailedCell1v2)
+    }
+    coloc1v2 = colocCalcStep(pairedDetailed = pairedDetailed1v2, step=step)
+    combColocStep = coloc1v2
+    #coloc1v2 = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2))), comp="1v2")
+    coloc1v2spot = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2)))/length(pairedDetailed1v2[,1]), comp="1v2")
+    combColoc = coloc1v2spot
+    return(list(combColoc, combColocStep,pairedDetailed1v2))
+  }
+  else {
+    pairedDetailed1v2 = data.frame()
+    pairedDetailed1v3 = data.frame()
+    pairedDetailed2v3 = data.frame()
+    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
+    print("Pairing Spots...")
+    for(i in 1:max(ch01$Cell)){
+      setTxtProgressBar(pb,i)
+      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], ch02[ch02$Cell ==i,], ch03[ch03$Cell ==i,], distDim)
+      if(length(ch01[ch01$Cell==i,1]) != 0 && length(ch02[ch02$Cell==i,1]) !=0){
+        spotPos1v2 = subset(spotPosAll, subset = str_sub(rownames(spotPosAll), -4) %!in% "ch03")
+        dist1v2 = as.matrix(dist(spotPos1v2))
+        paired1v2 = getClosestSpots(dm = dist1v2, comp = "1v2")
+        pairedDetailedCell1v2 = getDetails(pairedSpots = paired1v2, comp = "1v2",distDim=distDim)
+        rbind(pairedDetailed1v2, pairedDetailedCell1v2)
+        print(paired1v2)
+      }
+      if(length(ch01[ch01$Cell==i,1]) != 0 && length(ch03[ch03$Cell==i,1]) !=0){
+        spotPos1v3 = subset(spotPosAll, subset = str_sub(rownames(spotPosAll), -4) %!in% "ch02")
+        dist1v3 = as.matrix(dist(spotPos1v3))
+        paired1v3 = getClosestSpots(dm = dist1v3, comp = "1v3")
+        pairedDetailedCell1v3 = getDetails(pairedSpots = paired1v3, comp = "1v3",distDim=distDim)
+        rbind(pairedDetailed1v3, pairedDetailedCell1v3)
+      }
+      if(length(ch03[ch03$Cell==i,1]) != 0 && length(ch02[ch02$Cell==i,1]) !=0){
+        spotPos2v3 = subset(spotPosAll, subset = str_sub(rownames(spotPosAll), -4) %!in% "ch01")
+        dist2v3 = as.matrix(dist(spotPos2v3))
+        paired2v3 = getClosestSpots(dm = dist2v3, comp = "2v3")
+        pairedDetailedCell2v3 = getDetails(pairedSpots = paired2v3, comp = "2v3",distDim=distDim)
+        rbind(pairedDetailed2v3, pairedDetailedCell2v3)
+      }
+    }
+    print("Spots Paired")
+    #Generate stepwise co-localisation data
+    print("Step Coloc Calculations...")
+    pairedDetailed1v2<<-pairedDetailed1v2
+    coloc1v2 = colocCalcStep(pairedDetailed = pairedDetailed1v2, step=step)
+    coloc1v3 = colocCalcStep(pairedDetailed = pairedDetailed1v3, step=step)
+    coloc2v3 = colocCalcStep(pairedDetailed = pairedDetailed2v3, step=step)
+    combColocStep = rbind(coloc1v2, coloc1v3, coloc2v3)
+    #Generate per-spot co-localisation data, which takes into account spot width etc.
+    print("Per Channel Spot Colocalisation...")
+    coloc1v2spot = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2)))/length(pairedDetailed1v2[,1]), comp="1v2")
+    coloc1v3spot = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2)))/length(pairedDetailed1v2[,1]), comp="1v3")
+    coloc2v3spot = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2)))/length(pairedDetailed1v2[,1]), comp="2v3")
+    combColoc = rbind(coloc1v2spot, coloc1v3spot, coloc2v3spot)
+    return(list(combColoc, combColocStep,pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3))
+  }
+  rm(ch01,ch02,ch03)
+  print("Done")
+  #Get the closest spot in the opposing channel - these spots are then 'paired' #Need if statements so if ch03 doesn't exist, it doesnt try and do it
+} #Compare spots in up to 3 channels for co-localization
+
 compSpotsRange <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160, distDim=2, step=5, thresholdRange=NULL, filtVar = "SC_det_norm"){
   #filtVar defines the column to filter based upon - defaults to SC_det_norm.
   #Performing for 3 channels will take a very long time unless strict filtering is applied. Do not run without filtering!
@@ -311,6 +451,52 @@ compSpotsRange <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160, distD
       assign(paste("filt",paste("ch0",substr(names(filteringMatrix),4,5)[z],sep=""),sep=""),get(paste("ch0",substr(names(filteringMatrix),4,5)[z],sep=""))[get((paste("ch0",substr(names(filteringMatrix),4,5)[z],sep="")))[filtVar]>filteringMatrix[i,z], ])
     }
     compColoc=compSpots(ch01=filtch01, ch02=filtch02,ch03=filtch03, step=step, distDim = distDim, pixelsize = pixelsize)
+    listComps[[i]]=compColoc[[2]]
+    listComps[[i]]$FiltID = paste(names(filteringMatrix),filteringMatrix[i,], collapse='', sep="_")
+    listColoc[[i]]=compColoc[[1]]
+    listColoc[[i]]$FiltID = paste(names(filteringMatrix),filteringMatrix[i,], collapse='', sep="_")
+  }
+  dfColoc=do.call(rbind, listColoc)
+  dfComps=do.call(rbind, listComps)
+  return(list(dfColoc, dfComps, pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3))
+} #Iterates through comp spots for varying SC_det_norm thresholds. Simple way to view impact of filtering on spot pairing.
+
+compSpotsRangeByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160, distDim=2, step=5, thresholdRange=NULL, filtVar = "SC_det_norm"){
+  #filtVar defines the column to filter based upon - defaults to SC_det_norm.
+  #Performing for 3 channels will take a very long time unless strict filtering is applied. Do not run without filtering!
+  #thresholdRange can be a list of cut off values to test the effect of different cut offs for each channel.
+  #It should be as follows in order of thresholds for ch01, ch02, ch03 thresholdRange=list(c(0,0.2,0.5), c(0,0.1,0.8), c(0,0.4,0.9))
+  if(is.null(thresholdRange) | !is.list(thresholdRange)){
+    print("Must supply threshold range as a list of cut off values for filtering")
+  }
+  if(length(c(ch01[1,1], ch02[1,1],ch03[1,1]))!=length(thresholdRange)){
+    print("Error, number of lists for filtering does not equal number of channels being analysed\nif you do not want to apply filtering, simply make the filtering NA")
+  }
+  ########IN PROGRESS
+  filteringMatrix =expand.grid(thresholdRange[[1]],thresholdRange[[2]], thresholdRange[[3]])
+  #remove filtering for ch0x if list = NA
+  filteringMatrix[sapply(filteringMatrix, function(filteringMatrix) !any(is.na(filteringMatrix)))]
+  if(!("ch01" %in% paste("ch0", (substr(names(filteringMatrix),4,5)),sep=""))){
+    filtch01=ch01
+  }
+  if(!("ch02" %in% paste("ch0", (substr(names(filteringMatrix),4,5)),sep=""))){
+    filtch02=ch02
+  }
+  if(!("ch03" %in% paste("ch0", (substr(names(filteringMatrix),4,5)),sep=""))){
+    filtch03=ch03
+  }
+  listComps = list()
+  listColoc = list()
+  for(i in 1:length(filteringMatrix[,1])){
+    argnames <- match.call()
+    ch01<<-get(paste(as.list(argnames)$ch01))
+    ch02<<-get(paste(as.list(argnames)$ch02))
+    ch03<<-get(paste(as.list(argnames)$ch03))
+    print(sprintf("Cycle %iof%i", i, length(filteringMatrix[,1])))
+    for(z in 1:length(filteringMatrix)){
+      assign(paste("filt",paste("ch0",substr(names(filteringMatrix),4,5)[z],sep=""),sep=""),get(paste("ch0",substr(names(filteringMatrix),4,5)[z],sep=""))[get((paste("ch0",substr(names(filteringMatrix),4,5)[z],sep="")))[filtVar]>filteringMatrix[i,z], ])
+    }
+    compColoc=compSpotsByCell(ch01=filtch01, ch02=filtch02,ch03=filtch03, step=step, distDim = distDim, pixelsize = pixelsize)
     listComps[[i]]=compColoc[[2]]
     listComps[[i]]$FiltID = paste(names(filteringMatrix),filteringMatrix[i,], collapse='', sep="_")
     listColoc[[i]]=compColoc[[1]]
@@ -372,9 +558,11 @@ colocCalcStep<- function(pairedDetailed, step=5,maxColoc=NULL){
   #####Calculate co-localisation over a sliding window.
   #####Function will return proportion of co-localising spots based on a range of distances between 0nm and maxColoc nm.
   #####If left blank, maxColoc will default to the max distance between spots (giving 100% co-localisation)
-  ##### step is the step size, e.g. increment co-localisation distance by 5nm, 10nm etc. Defaults to 5nm. - if set to "max/100" then step will be max distance/100.
+  ##### step is the step size, e.g. increment co-localisation distance by 5nm, 10nm etc. Defaults to 5nm. - if set to "max/100" then step will be max distance/100, providing 100 steps.
   if(step=="max/100"){
     step=(max(pairedDetailed$Distance)/100)
+    print(step)
+    print(mround(max(pairedDetailed$Distance)))
   }
   if(is.null(maxColoc)){
     coloc = lapply(seq(from=0, to = mround(max(pairedDetailed$Distance),base=step), by = step), function(i, distData=pairedDetailed$Distance) length(distData[distData<i])/length(distData))
