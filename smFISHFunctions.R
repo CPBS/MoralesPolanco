@@ -12,6 +12,37 @@ require(ggbeeswarm)
 require(colorspace)
 require(RColorBrewer)
 
+theme_Publication_Gridlines <- function(base_size=9, base_family="Calibri", gridlines = FALSE) {
+  library(grid)
+  library(ggthemes)
+  (theme_foundation(base_size=base_size, base_family=base_family)
+    + theme(plot.title = element_text(face = "bold",
+                                      size = rel(1.2), hjust = 0.5),
+            text = element_text(),
+            panel.background  = element_blank(),
+            plot.background = element_rect(fill="transparent", colour=NA),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            axis.title = element_text(face = "bold",size = rel(1)),
+            axis.title.y = element_text(angle=90,vjust =2),
+            axis.title.x = element_text(vjust = -0.2),
+            axis.text = element_text(size = 8),
+            axis.line = element_line(colour="black"),
+            axis.ticks = element_line(),
+            legend.key = element_rect(fill="transparent", colour=NA),
+            legend.position = "bottom",
+            legend.background = element_rect(fill="transparent", colour=NA),
+            legend.direction = "horizontal",
+            legend.key.size= unit(0.2, "cm"),
+            legend.spacing = unit(0, "cm"),
+            plot.margin=unit(c(10,5,5,5),"mm"),
+            strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+            strip.text = element_text(face="bold"),
+            panel.grid.major = element_line(colour="#f0f0f0"),
+            panel.grid.minor = element_blank(),
+            legend.key.height=unit(1,"line")
+    ))
+}
+
 mround <- function(x,base){
   base*round(x/base)
 }
