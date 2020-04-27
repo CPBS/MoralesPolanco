@@ -122,11 +122,8 @@ closestSpotGrabber <- function(dm = dm, i, numAgainst = numAgainst, numAll = num
     closestSpot = as.data.frame(dm[(numAgainst+1):numAll, i][which(dm[(numAgainst+1):numAll, i]==min(dm[(numAgainst+1):numAll, i]))])
     colnames(closestSpot) = colnames(dm)[length(colnames(dm))]
   }
-  print(closestSpot)
   spotNumber = as.numeric(substr(names(closestSpot),-4,nchar(names(closestSpot))-4))
-  print(spotNumber)
-  df = data.frame(spotsCompAgainst=str_remove(rownames(dm), "ch0[1-3]")[1], spotsComp=spotNumber, Distance = closestSpot[[1]])
-  print(df)
+  df = data.frame(spotsCompAgainst=str_remove(rownames(dm), "ch0[1-3]")[i], spotsComp=spotNumber, Distance = closestSpot[[1]])
   #Change the column names of the df to the variable e.g. before the df would have a column called spotsComp, but what
   #we actually want is the column name to be the string stored in the variable spotsComp (e.g. Ch02)
   names(df)[names(df)=="spotsCompAgainst"]  <- spotsCompAgainst
@@ -309,65 +306,84 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
     ch03$Pos_Z = ch03$Pos_Z/(160/pixelsize)
   }
   if(is.null(ch01)){
+    print("Pairing Spots...")
+    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed2v3 = data.frame()
     for(i in 1:max(ch02$Cell)){
-      print(paste("Cell",i,sep=" "))
+      setTxtProgressBar(pb,i)
       spotPosAll = getSpotsXYZ(ch01=NULL, ch02[ch02$Cell ==i,], ch03[ch02$Cell==i,], distDim)
       spotPosAll = na.omit(spotPosAll)
       dist2v3 = as.matrix(dist(spotPosAll))
       paired2v3 = getClosestSpots(dm = dist2v3, comp = "2v3")
       pairedDetailedCell2v3 = getDetails(pairedSpots = paired2v3, comp = "2v3",distDim=distDim)
-      rbind(pairedDetailed2v3, pairedDetailedCell2v3)
+      pairedDetailed2v3=rbind(pairedDetailed2v3, pairedDetailedCell2v3)
     }
+    print("Spots Paired")
+    print("Step Coloc Calculations...")
     coloc2v3 = colocCalcStep(pairedDetailed = pairedDetailed2v3, step=step)
     combColocStep = coloc2v3
     #coloc2v3 = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2))), comp="2v3")
+    print("Per Channel Spot Colocalisation...")
     coloc2v3spot = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2)))/length(pairedDetailed2v3[,1]), comp="2v3")
     combColoc = coloc2v3spot
     return(list(combColoc, combColocStep,pairedDetailed2v3))
+    print("Done")
   }
   if(is.null(ch02)){
+    print("Pairing Spots...")
+    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed1v3 = data.frame()
     for(i in 1:max(ch03$Cell)){
-      print(paste("Cell",i,sep=" "))
+      setTxtProgressBar(pb,i)
       spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], NULL, ch03[ch02$Cell==i,], distDim)
       spotPosAll = na.omit(spotPosAll)
       dist1v3 = as.matrix(dist(spotPosAll))
       paired1v3 = getClosestSpots(dm = dist1v3, comp = "1v3")
       pairedDetailedCell1v3 = getDetails(pairedSpots = paired1v3, comp = "1v3",distDim=distDim)
-      rbind(pairedDetailed1v3, pairedDetailedCell1v3)
+      pairedDetailed1v3=rbind(pairedDetailed1v3, pairedDetailedCell1v3)
     }
+    print("Spots Paired")
+    print("Step Coloc Calculations...")
     coloc1v3 = colocCalcStep(pairedDetailed = pairedDetailed1v3, step=step)
     combColocStep = coloc1v3
     #coloc1v3 = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2))), comp="1v3")
+    print("Per Channel Spot Colocalisation...")
     coloc1v3spot = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2)))/length(pairedDetailed1v3[,1]), comp="1v3")
     combColoc = coloc1v3spot
     return(list(combColoc, combColocStep,pairedDetailed1v3))
+    print("Done")
   }
   if(is.null(ch03)){
+    print("Pairing Spots...")
+    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed1v2 = data.frame()
     for(i in 1:max(ch01$Cell)){
-      print(paste("Cell",i,sep=" "))
+      setTxtProgressBar(pb,i)
       spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], ch02[ch02$Cell ==i,], NULL, distDim)
       spotPosAll = na.omit(spotPosAll)
       dist1v2 = as.matrix(dist(spotPosAll))
       paired1v2 = getClosestSpots(dm = dist1v2, comp = "1v2")
       pairedDetailedCell1v2 = getDetails(pairedSpots = paired1v2, comp = "1v2",distDim=distDim)
       rbind(pairedDetailed1v2, pairedDetailedCell1v2)
+      pairedDetailed2v3
     }
+    print("Spots Paired")
+    print("Step Coloc Calculations...")
     coloc1v2 = colocCalcStep(pairedDetailed = pairedDetailed1v2, step=step)
     combColocStep = coloc1v2
     #coloc1v2 = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2))), comp="1v2")
+    print("Per Channel Spot Colocalisation...")
     coloc1v2spot = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2)))/length(pairedDetailed1v2[,1]), comp="1v2")
     combColoc = coloc1v2spot
     return(list(combColoc, combColocStep,pairedDetailed1v2))
+    print("Done")
   }
   else {
     pairedDetailed1v2 = data.frame()
     pairedDetailed1v3 = data.frame()
     pairedDetailed2v3 = data.frame()
-    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     print("Pairing Spots...")
+    pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     for(i in 1:max(ch01$Cell)){
       setTxtProgressBar(pb,i)
       spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], ch02[ch02$Cell ==i,], ch03[ch03$Cell ==i,], distDim)
@@ -376,28 +392,26 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
         dist1v2 = as.matrix(dist(spotPos1v2))
         paired1v2 = getClosestSpots(dm = dist1v2, comp = "1v2")
         pairedDetailedCell1v2 = getDetails(pairedSpots = paired1v2, comp = "1v2",distDim=distDim)
-        rbind(pairedDetailed1v2, pairedDetailedCell1v2)
-        print(paired1v2)
+        pairedDetailed1v2=rbind(pairedDetailed1v2, pairedDetailedCell1v2)
       }
       if(length(ch01[ch01$Cell==i,1]) != 0 && length(ch03[ch03$Cell==i,1]) !=0){
         spotPos1v3 = subset(spotPosAll, subset = str_sub(rownames(spotPosAll), -4) %!in% "ch02")
         dist1v3 = as.matrix(dist(spotPos1v3))
         paired1v3 = getClosestSpots(dm = dist1v3, comp = "1v3")
         pairedDetailedCell1v3 = getDetails(pairedSpots = paired1v3, comp = "1v3",distDim=distDim)
-        rbind(pairedDetailed1v3, pairedDetailedCell1v3)
+        pairedDetailed1v3=rbind(pairedDetailed1v3, pairedDetailedCell1v3)
       }
       if(length(ch03[ch03$Cell==i,1]) != 0 && length(ch02[ch02$Cell==i,1]) !=0){
         spotPos2v3 = subset(spotPosAll, subset = str_sub(rownames(spotPosAll), -4) %!in% "ch01")
         dist2v3 = as.matrix(dist(spotPos2v3))
         paired2v3 = getClosestSpots(dm = dist2v3, comp = "2v3")
         pairedDetailedCell2v3 = getDetails(pairedSpots = paired2v3, comp = "2v3",distDim=distDim)
-        rbind(pairedDetailed2v3, pairedDetailedCell2v3)
+        pairedDetailed2v3=rbind(pairedDetailed2v3, pairedDetailedCell2v3)
       }
     }
     print("Spots Paired")
     #Generate stepwise co-localisation data
     print("Step Coloc Calculations...")
-    pairedDetailed1v2<<-pairedDetailed1v2
     coloc1v2 = colocCalcStep(pairedDetailed = pairedDetailed1v2, step=step)
     coloc1v3 = colocCalcStep(pairedDetailed = pairedDetailed1v3, step=step)
     coloc2v3 = colocCalcStep(pairedDetailed = pairedDetailed2v3, step=step)
@@ -409,9 +423,10 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
     coloc2v3spot = data.frame(colocalisation = length(which(pairedDetailed2v3$Distance<((pairedDetailed2v3$sizech02+pairedDetailed2v3$sizech03)/2)))/length(pairedDetailed1v2[,1]), comp="2v3")
     combColoc = rbind(coloc1v2spot, coloc1v3spot, coloc2v3spot)
     return(list(combColoc, combColocStep,pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3))
+    print("Done")
   }
   rm(ch01,ch02,ch03)
-  print("Done")
+
   #Get the closest spot in the opposing channel - these spots are then 'paired' #Need if statements so if ch03 doesn't exist, it doesnt try and do it
 } #Compare spots in up to 3 channels for co-localization
 
@@ -561,8 +576,6 @@ colocCalcStep<- function(pairedDetailed, step=5,maxColoc=NULL){
   ##### step is the step size, e.g. increment co-localisation distance by 5nm, 10nm etc. Defaults to 5nm. - if set to "max/100" then step will be max distance/100, providing 100 steps.
   if(step=="max/100"){
     step=(max(pairedDetailed$Distance)/100)
-    print(step)
-    print(mround(max(pairedDetailed$Distance)))
   }
   if(is.null(maxColoc)){
     coloc = lapply(seq(from=0, to = mround(max(pairedDetailed$Distance),base=step), by = step), function(i, distData=pairedDetailed$Distance) length(distData[distData<i])/length(distData))
