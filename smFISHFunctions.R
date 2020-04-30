@@ -52,7 +52,7 @@ plotFISHfilt <- function(smFISH, type="plotly"){     #####Can plot the data as h
     p1 = plotly_build(ggplot(smFISH, aes(BGD)) + geom_density())
     p2 = plotly_build(ggplot(smFISH, aes(RES)) + geom_density())
     p3 = plotly_build(ggplot(smFISH, aes(SC_det_norm)) + geom_density())
-    p4 = plotly_build(ggplot(smFISH, aes(INT_filt)) + geom_density())
+    p4 = plotly_build(ggplot(smFISH, aes(INT_raw)) + geom_density())
     return(subplot(list(p1,p2,p3,p4), shareX = FALSE, shareY = FALSE, nrows = 2))
   }
   else if(type=="ggplot"){
@@ -504,7 +504,8 @@ compSpotsRange <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160, distD
   }
   dfColoc=do.call(rbind, listColoc)
   dfComps=do.call(rbind, listComps)
-  return(list(dfColoc, dfComps, pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3))
+  return(list(dfColoc, dfComps))
+  #pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3 were returned
 } #Iterates through comp spots for varying SC_det_norm thresholds. Simple way to view impact of filtering on spot pairing.
 
 compSpotsRangeByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160, distDim=2, step=5, thresholdRange=NULL, filtVar = "SC_det_norm"){
@@ -550,7 +551,8 @@ compSpotsRangeByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize=160,
   }
   dfColoc=do.call(rbind, listColoc)
   dfComps=do.call(rbind, listComps)
-  return(list(dfColoc, dfComps, pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3))
+  return(list(dfColoc, dfComps))
+  #pairedDetailed1v2, pairedDetailed1v3, pairedDetailed2v3
 } #Iterates through comp spots for varying SC_det_norm thresholds. Simple way to view impact of filtering on spot pairing.
 
 stepPlot<-function(comparedSpots, colour=NULL, collated=FALSE, shareAxes = TRUE, size=1){
