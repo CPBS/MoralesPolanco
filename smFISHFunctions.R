@@ -56,10 +56,10 @@ plotFISHfilt <- function(smFISH, type="plotly"){     #####Can plot the data as h
     return(subplot(list(p1,p2,p3,p4), shareX = FALSE, shareY = FALSE, nrows = 2))
   }
   else if(type=="ggplot"){
-    p1 = ggplot(smFISH, aes(BGD)) + geom_density() + theme_Publication_GridlinesTesting()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
-    p2 = ggplot(smFISH, aes(RES)) + geom_density() + theme_Publication_GridlinesTesting()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
-    p3 = ggplot(smFISH, aes(SC_det_norm)) + geom_density() + theme_Publication_GridlinesTesting()+theme(plot.margin = unit(c(0.2, 0.2, 0.3, 0.3), "cm"))
-    p4 = ggplot(smFISH, aes(INT_filt)) + geom_density() + theme_Publication_GridlinesTesting()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
+    p1 = ggplot(smFISH, aes(BGD)) + geom_density() + theme_Publication_Gridlines()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
+    p2 = ggplot(smFISH, aes(RES)) + geom_density() + theme_Publication_Gridlines()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
+    p3 = ggplot(smFISH, aes(SC_det_norm)) + geom_density() + theme_Publication_Gridlines()+theme(plot.margin = unit(c(0.2, 0.2, 0.3, 0.3), "cm"))
+    p4 = ggplot(smFISH, aes(INT_filt)) + geom_density() + theme_Publication_Gridlines()+theme(plot.margin = unit(c(0.2, 0.3, 0.2, 0.3), "cm"))
     g1 = ggplotGrob(p1)
     g2 = ggplotGrob(p2)
     g3 = ggplotGrob(p3)
@@ -173,7 +173,7 @@ getClosestSpots <- function(dm, comp){       ############Returns a df containing
   return(do.call(rbind.data.frame,lapply(1:numAgainst,closestSpotGrabber, dm =dm, numAgainst = numAgainst, numAll = numAll, spotsCompAgainst = spotsCompAgainst, spotsComp=spotsComp)))
 }
 
-getDetails <- function(pairedSpots, comp,distDim) {   ###############Gets all spot info for paired spots e.g. intensity, x,y,z, size, etc.
+getDetails <- function(pairedSpots, comp,distDim, cell) {   ###############Gets all spot info for paired spots e.g. intensity, x,y,z, size, etc.
   #1st, make 2 variables based on the comp, that can be used to get the appropriate dataframes without having to supply a huge list of vairables each time the function is called
   #This does require thought that the name of the detailed dataframe is simply ch01 or ch02 etc.
   #Paired spots is the output from function getClosestSpots (it is just a list of closest spots and distance between them)
@@ -186,7 +186,7 @@ getDetails <- function(pairedSpots, comp,distDim) {   ###############Gets all sp
   detailedComp = get(spotsComp)
   #Take each spot number - this is just listed in each row of the pairedSpots df
   #and then find the matching spot in the original detailed dataframes and get ALL of the data for that spot
-  compAgainst = detailedAgainst[pairedSpots[i,1], ]
+  compAgainst = detailedAgainst[as.numeric(as.character(pairedSpots[i,1])),]
   comp = detailedComp[pairedSpots[i,2], ]
   if(distDim ==3){
     compAgainst$size = (compAgainst$SigmaX+compAgainst$SigmaY+compAgainst$SigmaZ)/3
@@ -208,7 +208,7 @@ colocCalc<- function(pairedDetailed, step=5,maxColoc=NULL){
   #####If left blank, maxColoc will default to the max distance between spots (giving 100% co-localisation)
   ##### step is the step size, e.g. increment co-localisation distance by 5nm, 10nm etc. Defaults to 5nm. - if set to "max/100" then step will be max distance/100.
   if(step=="max/100"){
-    step=(max(pairedDetailed$Distance)/100)
+    step=mround((max(pairedDetailed$Distance)/100),1)
   }
   if(is.null(maxColoc)){
     coloc = lapply(seq(from=0, to = mround(max(pairedDetailed$Distance),base=step), by = step), function(i, distData=pairedDetailed$Distance) length(distData[distData<i])/length(distData))
@@ -340,9 +340,9 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
     print("Pairing Spots...")
     pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed2v3 = data.frame()
-    for(i in 1:max(ch02$Cell)){
+    for(i in 1:length(unique(ch02$Cell))){
       setTxtProgressBar(pb,i)
-      spotPosAll = getSpotsXYZ(ch01=NULL, ch02[ch02$Cell ==i,], ch03[ch02$Cell==i,], distDim)
+      spotPosAll = getSpotsXYZ(ch01=NULL, ch02[ch02$Cell ==unique(ch02$Cell)[i],], ch03[ch03$Cell==unique(ch03$Cell)[i],], distDim)
       spotPosAll = na.omit(spotPosAll)
       dist2v3 = as.matrix(dist(spotPosAll))
       paired2v3 = getClosestSpots(dm = dist2v3, comp = "2v3")
@@ -364,9 +364,9 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
     print("Pairing Spots...")
     pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed1v3 = data.frame()
-    for(i in 1:max(ch03$Cell)){
+    for(i in 1:length(unique(ch03$Cell))){
       setTxtProgressBar(pb,i)
-      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], NULL, ch03[ch02$Cell==i,], distDim)
+      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==unique(ch01$Cell)[i],], NULL, ch03[ch03$Cell==unique(ch03$Cell)[i],], distDim)
       spotPosAll = na.omit(spotPosAll)
       dist1v3 = as.matrix(dist(spotPosAll))
       paired1v3 = getClosestSpots(dm = dist1v3, comp = "1v3")
@@ -388,21 +388,20 @@ compSpotsByCell <- function(ch01=NULL, ch02=NULL, ch03=NULL, pixelsize = 160, di
     print("Pairing Spots...")
     pb = txtProgressBar(min=0,max=max(ch01$Cell),style = 3)
     pairedDetailed1v2 = data.frame()
-    for(i in 1:max(ch01$Cell)){
+    for(i in 1:length(unique(ch01$Cell))){
       setTxtProgressBar(pb,i)
-      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==i,], ch02[ch02$Cell ==i,], NULL, distDim)
+      spotPosAll = getSpotsXYZ(ch01=ch01[ch01$Cell==unique(ch01$Cell)[i],], ch02[ch02$Cell==unique(ch02$Cell)[i],],ch03 = NULL, distDim)
       spotPosAll = na.omit(spotPosAll)
       dist1v2 = as.matrix(dist(spotPosAll))
       paired1v2 = getClosestSpots(dm = dist1v2, comp = "1v2")
       pairedDetailedCell1v2 = getDetails(pairedSpots = paired1v2, comp = "1v2",distDim=distDim)
-      rbind(pairedDetailed1v2, pairedDetailedCell1v2)
-      pairedDetailed2v3
+      pairedDetailed1v2=rbind(pairedDetailed1v2, pairedDetailedCell1v2)
     }
     print("Spots Paired")
     print("Step Coloc Calculations...")
     coloc1v2 = colocCalcStep(pairedDetailed = pairedDetailed1v2, step=step)
     combColocStep = coloc1v2
-    #coloc1v2 = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2))), comp="1v2")
+    #coloc1v3 = data.frame(colocalisation = length(which(pairedDetailed1v3$Distance<((pairedDetailed1v3$sizech01+pairedDetailed1v3$sizech03)/2))), comp="1v3")
     print("Per Channel Spot Colocalisation...")
     coloc1v2spot = data.frame(colocalisation = length(which(pairedDetailed1v2$Distance<((pairedDetailed1v2$sizech01+pairedDetailed1v2$sizech02)/2)))/length(pairedDetailed1v2[,1]), comp="1v2")
     combColoc = coloc1v2spot
@@ -585,7 +584,7 @@ stepPlot<-function(comparedSpots, colour=NULL, collated=FALSE, shareAxes = TRUE,
       grobname = sprintf("grob%s",i)
       assign(colname, colorRampPalette(colour[[i]]))
       assign(grobname, ggplot(subset(comparedSpots,comparedSpots$comp==unique(comparedSpots$comp)[i]), aes(distance, colocalisation), group = comp)+geom_line(aes(col=FiltID),size=size)+facet_grid(comp~.)
-             +scale_color_manual(values = get(colname)(length(unique(comparedSpots$FiltID)))) + labs(x="Distance (nm)", y = "Colocalisation (%)")+theme_Publication_Gridlines_CB()+guides(col=guide_legend(nrow=2)))
+             +scale_color_manual(values = get(colname)(length(unique(comparedSpots$FiltID)))) + labs(x="Distance (nm)", y = "Colocalisation (%)")+theme_Publication_Gridlines()+guides(col=guide_legend(nrow=2)))
       grobs[[i]]= get(grobname)
       colocPropPlot = grid.arrange(grobs=grobs)
       #######NEED TO MAKE IT SO THAT CAN HAVE COLOUR AS LIST, BUT COLLATED - and also one that shares axes - i think just add a line with scale_x_continuous - min and max to all of them if shareAxes = TRUE!
@@ -608,7 +607,7 @@ colocCalcStep<- function(pairedDetailed, step=5,maxColoc=NULL){
   #####If left blank, maxColoc will default to the max distance between spots (giving 100% co-localisation)
   ##### step is the step size, e.g. increment co-localisation distance by 5nm, 10nm etc. Defaults to 5nm. - if set to "max/100" then step will be max distance/100, providing 100 steps.
   if(step=="max/100"){
-    step=(max(pairedDetailed$Distance)/100)
+    step=mround((max(pairedDetailed$Distance)/100),1)
   }
   if(is.null(maxColoc)){
     coloc = lapply(seq(from=0, to = mround(max(pairedDetailed$Distance),base=step), by = step), function(i, distData=pairedDetailed$Distance) length(distData[distData<i])/length(distData))
